@@ -18,7 +18,11 @@ def create_gif(folder_path, gif_name):
     gif_path = os.path.join(folder_path, gif_name)
     images[0].save(gif_path, save_all=True, append_images=images[1:], optimize=False, duration=200, loop=0)
 
+
+
 # Example usage
-folder_path = r"./__tmp_pic"
-gif_name = "animation.gif"
-create_gif(folder_path, gif_name)
+# folder_path = r"./__tmp_pic"
+# gif_name = "animation.gif"
+# create_gif(folder_path, gif_name)
+
+

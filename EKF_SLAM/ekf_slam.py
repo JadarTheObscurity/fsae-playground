@@ -115,7 +115,7 @@ def angle_clip(angle):
         angle -= 2 * np.pi
     return angle
 
-def find_closest_landmark(x, P, z, Q, alpha=30.0):
+def find_closest_landmark(x, P, z, Q, alpha=1.0):
     d = []
     map = []
     num_landmark = get_num_landmark(x) 
@@ -192,12 +192,10 @@ def expand_P(P, sigma):
     return P
 
 
-
-
 # Create global map
 track_width = 3.0
 track_radius = 6.0
-cone_number = 10
+cone_number = 12
 global_map = np.empty((0, 2))
 for t in np.linspace(0, 2 * np.pi, cone_number, endpoint=False):
     inner_r = track_radius - track_width / 2
@@ -216,7 +214,7 @@ x = x_gt.copy()
 
 num_landmark = int((x.shape[0]-3) // 2)
 landmark_sigma = 0.1
-R = 0.01 * np.eye(3)
+R = 0.1 * np.eye(3)
 Q = 0.01 * np.eye(2)
 
 # Create P 3x3 to 3+2N x 3+2N
@@ -234,7 +232,8 @@ fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 fig.canvas.mpl_connect('key_release_event', 
     lambda event: [exit(0) if event.key == 'escape' else None])
 im = axs[1].matshow(P, cmap='hot')  # Display P as a heatmap using matshow
-fig.colorbar(im, ax=axs[1])  # Add a colorbar to the heatmap
+
+cbar = fig.colorbar(im, ax=axs[1])  # Add a colorbar to the heatmap
 
 for iter in range(501):
     u_gt = np.array([10.0, 10 / track_radius])
@@ -243,6 +242,13 @@ for iter in range(501):
     observations = sensor_observation(x_gt, global_map)
     x_gt, _ = motion_model(x_gt, u_gt, dt=0.01)
     x_raw, _ = motion_model(x_raw, u, dt=0.01)
+    if iter % 4 == 0:
+        observations = sensor_observation(x_gt, global_map)
+        # print(f"Observe at {iter}, {observations}")
+    else:
+        observations = []
+
+    prev_x = x.copy()
     x, P = ekf_slam(x, P, u, observations)
 
     path_gt_hist = np.vstack((path_gt_hist, x_gt[:3].reshape(1, 3)))
@@ -304,11 +310,12 @@ for iter in range(501):
     # Subplot 2: Heatmap of P
     im = axs[1].matshow(P, cmap='hot')  # Display P as a heatmap using matshow
     # fig.colorbar(im, ax=axs[1])  # Add a colorbar to the heatmap
+    cbar.update_normal(im)
     axs[1].set_title('Heatmap of P')  # Add a title to the heatmap
     
-    if iter % 5 == 0:
-        print(f"Save as {iter:04}.png")
-        fig.savefig(f"./__tmp_pic/{iter:04}.png")
+    # if iter % 5 == 0:
+    print(f"Save as {iter:04}.png")
+    fig.savefig(f"./__tmp_pic/{iter:04}.png")
     plt.pause(0.001)
     """
     # Subplot 1: Original plot
