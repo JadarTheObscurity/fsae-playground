@@ -39,8 +39,9 @@ def sensor_observation(x, map):
     car_theta = x[2]
     for landmark in map:
         r = np.sqrt((landmark[0] - car_x) ** 2 + (landmark[1] - car_y) ** 2)
-        if r < observation_radius:
-            theta = np.arctan2(landmark[1] - car_y, landmark[0] - car_x) - car_theta
+        theta = np.arctan2(landmark[1] - car_y, landmark[0] - car_x) - car_theta
+        theta = angle_clip(theta)
+        if r < observation_radius and abs(theta) < np.pi:
             observations.append((r, theta))
     return observations
 
@@ -144,16 +145,17 @@ def ekf_slam(x, P, u, observations):
     
     return x, P
 
-global_map = np.array([
-    [7, 0],
-    [-7, 0],
-    [0, 7],
-    [0, -7],
-    [7, 7],
-    [7, -7],
-    [-7, 7],
-    [-7, -7],
-])
+
+# Create global map
+track_width = 3.0
+track_radius = 10.0
+cone_number = 5
+global_map = np.empty((0, 2))
+for t in np.linspace(0, 2 * np.pi, cone_number + 1):
+    inner_r = track_radius - track_width / 2
+    outer_r = track_radius + track_width / 2
+    global_map = np.vstack((global_map, np.array([inner_r * np.cos(t), inner_r * np.sin(t)])))
+    global_map = np.vstack((global_map, np.array([outer_r * np.cos(t), outer_r * np.sin(t)])))
 
 x_gt = np.array([0, -10, 0], dtype=np.float32)
 x_raw = x_gt.copy()
@@ -163,26 +165,21 @@ for m in global_map:
     x = np.concatenate((x, np.array([m[0], m[1]])))
 
 num_landmark = int((x.shape[0]-3) // 2)
-landmark_sigma = 100
+landmark_sigma = 0.1
 
+# Create P 3x3 to 3+2N x 3+2N
 init_P = np.eye((3))
-
-# Enlarge P from 3x3 to 3+2N x 3+2N
 P = np.concatenate((init_P, np.zeros((3, 2 * num_landmark))), axis=1)
 P = np.concatenate((P, np.zeros((2 * num_landmark, 3 + 2 * num_landmark))), axis=0)
 for i in range(3, 3 + 2 * num_landmark):
     P[i][i] = landmark_sigma
 
 
-print(x)
-print(P)
 path_gt_hist = np.empty((0, 3))
 path_raw_hist = np.empty((0, 3))
 path_hist = np.empty((0, 3))
 
-ims = []
-fig = plt.figure(figsize=(10, 5))
-for i in range(100):
+for i in range(650):
     u_gt = np.array([10, 10/10])
     u = u_gt + 1 * (np.random.random(2) - 0.3)
 
@@ -218,26 +215,21 @@ for i in range(100):
         plt.plot([x[0], mx], [x[1], my], '-b')
         plt.plot(mx, my, 'x')
 
-        # Theory
-        closest_lmk, lmk_idx = find_closest_landmark(x, z)
-        z_hat, H = sensor_model(x, closest_lmk)
-        theta = z_hat[1] + x[2]
-        mx = x[0] + z_hat[0] * np.cos(theta)
-        my = x[1] + z_hat[0] * np.sin(theta)
-        # plot (mx, my) as a X point and a line from (x[0], x[1]) to (mx, my) in blue line
-        plt.plot([x[0], mx], [x[1], my], '-b')
-        plt.plot(mx, my, 'o')
+        # # Theory
+        # closest_lmk, lmk_idx = find_closest_landmark(x, z)
+        # z_hat, H = sensor_model(x, closest_lmk)
+        # theta = z_hat[1] + x[2]
+        # mx = x[0] + z_hat[0] * np.cos(theta)
+        # my = x[1] + z_hat[0] * np.sin(theta)
+        # # plot (mx, my) as a X point and a line from (x[0], x[1]) to (mx, my) in blue line
+        # plt.plot([x[0], mx], [x[1], my], '-b')
+        # plt.plot(mx, my, 'o')
 
     # Plot path
     plt.scatter(global_map[:, 0], global_map[:, 1], c='k', marker='*')
     plt.scatter(path_gt_hist[:, 0], path_gt_hist[:, 1], c='k', marker='.')
     plt.scatter(path_raw_hist[:, 0], path_raw_hist[:, 1], c='b', marker='.')
     plt.scatter(path_hist[:, 0], path_hist[:, 1], c='r', marker='.')
-    # plt.plot(global_map[:, 0], global_map[:, 1], '*k')
-    # plt.plot(path_gt_hist[:, 0], path_gt_hist[:, 1], '.k')
-    # plt.plot(path_raw_hist[:, 0], path_raw_hist[:, 1], '.b')
-    # plt.plot(path_hist[:, 0], path_hist[:, 1], '.r')
-    # Plot sensor reading
 
     plt.axis("equal")
     plt.grid(True)
@@ -248,8 +240,6 @@ for i in range(100):
     plt.matshow(P, cmap='hot', fignum=0)  # Display P as a heatmap using matshow
     plt.colorbar()  # Add a colorbar to the heatmap
     plt.title('Heatmap of P')  # Add a title to the heatmap
-    if i % 5 == 0:
-        plt.savefig(f"./__tmp_pic/{i}.png")
+    # if i % 5 == 0:
+        # plt.savefig(f"./__tmp_pic/{i:04}.png")
     plt.pause(0.0001)
-    # while not plt.waitforbuttonpress():  # Wait for 'a' key press to continue
-    #     pass
