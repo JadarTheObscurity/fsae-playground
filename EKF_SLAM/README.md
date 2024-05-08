@@ -16,22 +16,26 @@ The EKF algorithm can be summarized as follows:
 
     Predict the state estimate and the covariance matrix based on the motion model and control inputs.
 
-    $$
+    ```math
     \mathbf{x}_{pred} = f(\mathbf{x}_{t-1}, \mathbf{u}_t) \\
     \mathbf{P}_{pred} = \mathbf{G}_t \mathbf{P}_{t-1} \mathbf{G}_t^T + \mathbf{Q}_t
-    $$
+    ```
 
+    ```math
+    x_{pred} = f({x}_{t-1}, {u}_t) \\
+    }_{pred} = {G}_t {P}_{t-1} {G}_t^T + {Q}_t
+    ```
     where $\mathbf{F}_t$ is the Jacobian of the motion model with respect to the state, and $\mathbf{Q}_t$ is the process noise covariance matrix.
 
 3. **Update:**
 
     Update the state estimate and the covariance matrix based on the measurement model and the observed measurements.
 
-    $$
+    ```math
     \mathbf{K}_t = \mathbf{P}_{pred} \mathbf{H}_t^T (\mathbf{H}_t \mathbf{P}_{pred} \mathbf{H}_t^T + \mathbf{R}_t)^{-1} \\
     \mathbf{x}_t = \mathbf{x}_{pred} + \mathbf{K}_t (\mathbf{z}_t - h(\mathbf{x}_{pred})) \\
     \mathbf{P}_t = (I - \mathbf{K}_t \mathbf{H}_t) \mathbf{P}_{pred}
-    $$
+    ```
 
     where $\mathbf{H}_t$ is the Jacobian of the measurement model with respect to the state, $\mathbf{R}_t$ is the measurement noise covariance matrix, $\mathbf{z}_t$ is the observed measurement, and $h(\cdot)$ is the measurement model.
 
