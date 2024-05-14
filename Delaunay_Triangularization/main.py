@@ -45,7 +45,7 @@ def BowyerWatson(points):
             triangulation.append(Triangle(p, edge.p1, edge.p2))
     remove_triangles = []
     for t in triangulation:
-        if any(p1 == p2 for p1 in t.points for p2 in super_triangle.points):
+        if any(np.all(np.equal(p1, p2)) for p1 in t.points for p2 in super_triangle.points):
             remove_triangles.append(t)
     for t in remove_triangles:
         triangulation.remove(t)
@@ -97,7 +97,10 @@ class Triangle:
             return None, None
 
         xc = 1 / (m2-m1) * (m2 * xa - m1 * xb + m1 * m2 * (ya-yb))
-        yc = -1 / m1 * (xc - xa) + ya
+        if abs(m1) > abs(m2):
+            yc = -1 / m1 * (xc - xa) + ya
+        else:
+            yc = -1 / m2 * (xc - xb) + yb
         r = np.hypot(xc-x1, yc-y1)
         return (xc, yc), r
 
@@ -105,21 +108,29 @@ class Triangle:
 
 class Edge:
     def __init__(self, p1, p2):
-        self.p1 = p1
-        self.p2 = p2
+        self.p1 = np.array(p1)
+        self.p2 = np.array(p2)
     
     def __eq__(self, e2):
-        return (self.p1 == e2.p1 and self.p2 == e2.p2) or (self.p1 == e2.p2 and self.p2 == e2.p1)
+        return (np.all(np.equal(self.p1, e2.p1)) and np.all(np.equal(self.p2, e2.p2))) or (np.all(np.equal(self.p1, e2.p1)) and np.all(np.equal(self.p2, e2.p2)))
 
 
 
-points = [(1, 0), (4, 2), (4, 5), (2, 4)]
-triangulation = BowyerWatson(points)
-print([tri.points for tri in triangulation])
-# Use matplotlib to plot all points and triangles
-import matplotlib.pyplot as plt
 
-for t in triangulation:
-    plt.plot([t.p1[0], t.p2[0], t.p3[0], t.p1[0]], [t.p1[1], t.p2[1], t.p3[1], t.p1[1]], 'b-')
-plt.plot([p[0] for p in points], [p[1] for p in points], 'ro')
-plt.show()
+if __name__ == '__main__':
+    points = np.array([[1, 1], [-1, 1], [1, 2], [-1, 2], [1.1, 3], [-0.9, 2.9], [1.4, 4.2], [-0.5, 4.3]])
+    triangulation = BowyerWatson(points)
+    edges = []
+    for tri in triangulation:
+        for e in tri.edges:
+            if e not in edges:
+                edges.append(e)
+    print(len(edges))
+    mid_points = np.array([(e.p1 + e.p2) / 2 for e in edges])
+
+    import matplotlib.pyplot as plt
+    for t in triangulation:
+        plt.plot([t.p1[0], t.p2[0], t.p3[0], t.p1[0]], [t.p1[1], t.p2[1], t.p3[1], t.p1[1]], 'b-')
+    plt.plot([p[0] for p in points], [p[1] for p in points], 'ro')
+    plt.scatter(mid_points[:,0], mid_points[:, 1])
+    plt.show()
