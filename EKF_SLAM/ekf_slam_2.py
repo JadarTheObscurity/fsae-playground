@@ -32,11 +32,13 @@ Algorithm EKF_SLAM(x, P, u, z):
     return x[t], P
 """
 
-def sensor_observation(x, map):
+def sensor_observation(x_gt, map):
     """
-    Return the landmarks robot would observed within range r
+    x: the real position of the robot [x, y, theta]
+    map: The true map
+    return: observed landmark in car frame, [(mx1, my1), (mx2, my2), ...]
     """
-    observation_radius = 5
+    observation_radius = 8
     observations = []
     car_x = x_gt[0]
     car_y = x_gt[1]
@@ -54,18 +56,21 @@ def sensor_observation(x, map):
 
 
 def motion_model(x, u, dt=0.01):
+    #TODO: use u=(vx, vy, yaw rate)
     num_landmark = get_num_landmark(x)
-    d_theta = u[1] * dt
-    turn_radius = u[0] / u[1]
-    dx = -turn_radius * np.sin(x[2]) + turn_radius * np.sin(x[2] + d_theta)
-    dy = turn_radius * np.cos(x[2]) - turn_radius * np.cos(x[2] + d_theta)
+    v = np.hypot(u[0], u[1])
+    yaw_rate = u[2]
+    phi = np.arctan2(u[1], u[0])
+    d_theta = yaw_rate * dt
+    turn_radius = v / yaw_rate
+    dx = -turn_radius * np.sin(x[2] + phi) + turn_radius * np.sin(x[2] + phi + d_theta)
+    dy = turn_radius * np.cos(x[2] + phi) - turn_radius * np.cos(x[2] + phi + d_theta)
 
-    F = np.eye(3)
-    F = np.concatenate((F, np.zeros((3, 2 * num_landmark))), axis=1)
+    F = np.concatenate((np.eye(3), np.zeros((3, 2 * num_landmark))), axis=1)
 
     G = np.array([
-        [0, 0, turn_radius * np.cos(x[2]) - turn_radius * np.cos(x[2] + d_theta)],
-        [0, 0, turn_radius * np.sin(x[2]) - turn_radius * np.sin(x[2] + d_theta)],
+        [0, 0, turn_radius * np.cos(x[2] + phi) - turn_radius * np.cos(x[2] + phi + d_theta)],
+        [0, 0, turn_radius * np.sin(x[2] + phi) - turn_radius * np.sin(x[2] + phi + d_theta)],
         [0, 0, 0]
     ])
     G = np.eye(3 + 2 * num_landmark) + F.T @ G @ F
@@ -144,9 +149,9 @@ def find_closest_landmark(x, P, z, Q, alpha=4.0):
         Psi = H @ P @ H.T + Q
         # md = z_diff.T @ np.linalg.inv(Psi) @ z_diff
         md = z_diff.T @ z_diff
-
         # Calculate the mahalanobis
         d.append(md)
+
     d.append(alpha)
     map.append(inverse_sensor_model(x, z))
     closest_idx = np.argmin(np.array(d))
@@ -222,7 +227,7 @@ x = x_gt.copy()
 num_landmark = int((x.shape[0]-3) // 2)
 landmark_sigma = 0.1
 R = 0.1 * np.eye(3)
-Q = 0.1 * np.eye(2)
+Q = 0.01 * np.eye(2)
 
 # Create P 3x3 to 3+2N x 3+2N
 P = np.eye(3)
@@ -239,16 +244,15 @@ fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 fig.canvas.mpl_connect('key_release_event', 
     lambda event: [exit(0) if event.key == 'escape' else None])
 im = axs[1].matshow(P, cmap='hot')  # Display P as a heatmap using matshow
-
 cbar = fig.colorbar(im, ax=axs[1])  # Add a colorbar to the heatmap
 
 for iter in range(501):
-    u_gt = np.array([10.0, 10 / track_radius])
-    u = u_gt + 1 * (np.random.random(2) - np.array([0.5, 0.3]))
+    u_gt = np.array([10.0, -1.0, 10 / track_radius])
+    u = u_gt + 1 * (np.random.random(3) - np.array([0.5, 0.5, 0.3]))
 
     x_gt, _ = motion_model(x_gt, u_gt, dt=0.01)
     x_raw, _ = motion_model(x_raw, u, dt=0.01)
-    if iter % 1 == 0:
+    if iter % 10 == 0:
         observations = sensor_observation(x_gt, global_map)
     else:
         observations = []
@@ -322,4 +326,4 @@ for iter in range(501):
     # if iter % 5 == 0:
     # print(f"Save as {iter:04}.png")
     # fig.savefig(f"./__tmp_pic/{iter:04}.png")
-    plt.pause(0.1)
+    plt.pause(0.001)
