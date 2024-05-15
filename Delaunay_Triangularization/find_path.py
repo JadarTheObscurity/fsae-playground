@@ -81,29 +81,62 @@ def get_best_path_greedy(triangulation):
         for e in tri.edges:
             if e not in edges:
                 edges.append(e)
-    anchor = np.array([0, 0])
-    search_length = 4
-    direction = np.array([1, 0])
-    paths = [anchor]
-    for _ in range(10):
-        search_edge = Edge(anchor, anchor + search_length * direction)
-        min_d = search_length
-        selected_edge = None
-        for e in edges:
-            p = intersection(search_edge, e)
-            if p is not None:
-                dis_to_anchor = np.linalg.norm(p - anchor)
-                if dis_to_anchor < min_d:
-                    min_d = dis_to_anchor
-                    selected_edge = e
-
-        if selected_edge is None:
+    # pick the longest one
+    # anchor = np.array([0, 0])
+    mid_point = [(e.p1 + e.p2) / 2 for e in edges]
+    # find the mid point that is closest to (0, 0)
+    mid_point = np.array(mid_point)
+    sort_idx = np.argsort(np.sum(np.square(mid_point), axis=1))
+    init_edge = edges[sort_idx[0]]
+    init_mid = (init_edge.p1 + init_edge.p2) / 2
+    print(f"Init mid: {init_mid}")
+    init_triangle = None
+    for tri in triangulation:
+        if init_edge in tri.edges:
+            init_triangle = tri
             break
-        new_anchor = (selected_edge.p1 + selected_edge.p2)/2
-        direction = (new_anchor - anchor) / np.linalg.norm(new_anchor - anchor)
-        anchor = new_anchor + 0.01 * direction
-        paths.append(anchor)
-    return np.array(paths)
+    # get the edge with the closest midpoint
+    anchors = []
+    directions = []
+    for e in init_triangle.edges:
+        if e is not init_edge:
+            mid = (e.p1 + e.p2) / 2
+            dir = (mid - init_mid) / np.linalg.norm(mid - init_mid)
+            directions.append(dir)
+            anchors.append(mid + 0.01 * dir)
+    print(anchors)
+    # anchor = mid_point[0]
+    # init_edge = init_edge.p2 - init_edge.p1
+    # direction = np.array([1, -init_edge[1] / init_edge[0]])
+    # direction = direction / np.linalg.norm(direction)
+    # anchor = anchor + 0.01 * direction
+    
+    def greedy_search(anchor, direction, search_length):
+        paths = [anchor]
+        for _ in range(10):
+            search_edge = Edge(anchor, anchor + search_length * direction)
+            min_d = search_length
+            selected_edge = None
+            for e in edges:
+                p = intersection(search_edge, e)
+                if p is not None:
+                    dis_to_anchor = np.linalg.norm(p - anchor)
+                    if dis_to_anchor < min_d:
+                        min_d = dis_to_anchor
+                        selected_edge = e
+            if selected_edge is None:
+                break
+            new_anchor = (selected_edge.p1 + selected_edge.p2)/2
+            direction = (new_anchor - anchor) / np.linalg.norm(new_anchor - anchor)
+            anchor = new_anchor + 0.01 * direction
+            paths.append(anchor)
+        return paths
+    path1 = [[0, 0], init_mid] + greedy_search(anchors[0], directions[0], 4)
+    path2 = [[0, 0], init_mid] + greedy_search(anchors[1], directions[1], 4)
+    if len(path1) > len(path2):
+        return np.array(path1)
+    else:
+        return np.array(path2)
 
 
 if __name__ == '__main__':
@@ -111,12 +144,13 @@ if __name__ == '__main__':
     R = 6
     w = 3
     l = 3
-    theta = 0
+    theta = np.deg2rad(5)
     dtheta = l / R
     left_l = (R - w/2) * dtheta
     right_l = (R + w/2) * dtheta
-    left_cones = [[1, w/2]]
-    right_cones = [[1, -w/2]]
+    left_cones = [[1 + w/2 * np.sin(theta),  w/2 * np.cos(theta)]]
+    right_cones = [[1 - w/2 * np.sin(theta),-w/2 * np.cos(theta)]]
+    # rotate left_cones and right_cones by 15 degrees
     for i in range(4):
         left_cones += [[left_l * np.cos(theta) + left_cones[-1][0], left_l * np.sin(theta) + left_cones[-1][1]]]
         right_cones += [[right_l * np.cos(theta) + right_cones[-1][0], right_l * np.sin(theta) + right_cones[-1][1]]]
