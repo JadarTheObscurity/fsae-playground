@@ -118,7 +118,7 @@ class Edge:
 
 
 if __name__ == '__main__':
-    points = np.array([[1, 1], [-1, 1], [1, 2], [-1, 2], [1.1, 3], [-0.9, 2.9], [1.4, 4.2], [-0.5, 4.3]])
+    points = np.array([[1, 1], [-1, 1], [1, 2], [-1, 2], [1.1, 3], [-0.9, 2.9], [1.7, 4.7], [-0.5, 4.3]])
     triangulation = BowyerWatson(points)
     edges = []
     for tri in triangulation:
