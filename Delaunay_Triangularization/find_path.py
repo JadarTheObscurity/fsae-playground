@@ -123,11 +123,20 @@ if __name__ == '__main__':
         theta += dtheta
     points = np.array(left_cones + right_cones)
 
+    import os
+    import sys
+    print(os.path.dirname(__file__))
+    sys.path.append(os.path.join(os.path.dirname(__file__), "../PurePursuit"))
+    from PurePursuit import pure_pursuit
+
     triangulation = BowyerWatson(points)
     paths = get_best_path_greedy(triangulation)
+
+    follow_radius = 4
+    print(pure_pursuit(paths, follow_radius, 1))
+
+
     plt.plot(-paths[:, 1], paths[:, 0])
-
-
     for t in triangulation:
         plt.plot([-t.p1[1], -t.p2[1], -t.p3[1], -t.p1[1]], [t.p1[0], t.p2[0], t.p3[0], t.p1[0]], 'b-')
     # plt.plot([p[0] for p in points], [p[1] for p in points], 'ro')
