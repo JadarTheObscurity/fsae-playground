@@ -4,7 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 sys.path.append("../Delaunay_Triangularization")
 from BowyerWatson import BowyerWatson
-from find_path import get_best_path_greedy
+from find_path import get_best_path_greedy, bfs
 
 def fit_curve(points):
     x = points[:, 0].reshape(-1, 1)
@@ -15,15 +15,15 @@ def fit_curve(points):
         return [0] + np.polyfit(x.flatten(), y.flatten(), 1).tolist()
     return np.polyfit(x.flatten(), y.flatten(), 2)
 
-with open("hist_cone_list.json", "r") as f:
-    hist_cone_list = json.load(f)
 
 
 
 fig = plt.figure(1)
 ax1 = fig.add_subplot(111, aspect='equal')
 
-cone_list_idx = 56
+with open("hist_cone_list2.json", "r") as f:
+    hist_cone_list = json.load(f)
+cone_list_idx = 104
 def plot(event):
     global cone_list_idx
     if event.key == 'j':
@@ -35,6 +35,7 @@ def plot(event):
     
     ax1.cla()
     points = np.array(hist_cone_list[cone_list_idx])
+    print(points)
     triangulation = BowyerWatson(points)
     filtered_triangulation = []
     for t in triangulation:
@@ -49,7 +50,10 @@ def plot(event):
         min_angle = min(angles)
         if min_angle > np.pi / 5:
             filtered_triangulation.append(t)
-    paths = get_best_path_greedy(filtered_triangulation)[1:]
+    paths = bfs(filtered_triangulation)
+    print(paths)
+    paths = np.array(paths)
+
 
     C = fit_curve(paths)
     # Sample 100 points from the curve
