@@ -13,9 +13,6 @@ def fit_curve(points):
         return None
     if x.shape[0] == 2:
         return [0] + np.polyfit(x.flatten(), y.flatten(), 1).tolist()
-    # A = np.hstack((x**2, x, np.ones_like(y)))
-    # C = np.linalg.inv(A.T @ A) @ A.T @ y
-    # return C
     return np.polyfit(x.flatten(), y.flatten(), 2)
 
 with open("hist_cone_list.json", "r") as f:
