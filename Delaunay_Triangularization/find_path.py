@@ -89,7 +89,6 @@ def get_best_path_greedy(triangulation):
     sort_idx = np.argsort(np.sum(np.square(mid_point), axis=1))
     init_edge = edges[sort_idx[0]]
     init_mid = (init_edge.p1 + init_edge.p2) / 2
-    print(f"Init mid: {init_mid}")
     init_triangle = None
     for tri in triangulation:
         if init_edge in tri.edges:
@@ -104,12 +103,6 @@ def get_best_path_greedy(triangulation):
             dir = (mid - init_mid) / np.linalg.norm(mid - init_mid)
             directions.append(dir)
             anchors.append(mid + 0.01 * dir)
-    print(anchors)
-    # anchor = mid_point[0]
-    # init_edge = init_edge.p2 - init_edge.p1
-    # direction = np.array([1, -init_edge[1] / init_edge[0]])
-    # direction = direction / np.linalg.norm(direction)
-    # anchor = anchor + 0.01 * direction
     
     def greedy_search(anchor, direction, search_length):
         paths = [anchor]
@@ -131,8 +124,9 @@ def get_best_path_greedy(triangulation):
             anchor = new_anchor + 0.01 * direction
             paths.append(anchor)
         return paths
-    path1 = [[0, 0], init_mid] + greedy_search(anchors[0], directions[0], 4)
-    path2 = [[0, 0], init_mid] + greedy_search(anchors[1], directions[1], 4)
+    search_length = 5
+    path1 = [[0, 0], init_mid] + greedy_search(anchors[0], directions[0], search_length)
+    path2 = [[0, 0], init_mid] + greedy_search(anchors[1], directions[1], search_length)
     if len(path1) > len(path2):
         return np.array(path1)
     else:
@@ -141,7 +135,7 @@ def get_best_path_greedy(triangulation):
 
 if __name__ == '__main__':
     # points = np.array([[1, 1], [-1, 1], [1, 2], [-1, 2], [1.1, 3], [-0.9, 2.9], [1.7, 4.7], [-0.5, 4.3]])
-    R = 6
+    R = 15
     w = 3
     l = 3
     theta = np.deg2rad(5)
@@ -170,9 +164,9 @@ if __name__ == '__main__':
     print(pure_pursuit(paths, follow_radius, 1))
 
 
-    plt.plot(-paths[:, 1], paths[:, 0])
-    for t in triangulation:
-        plt.plot([-t.p1[1], -t.p2[1], -t.p3[1], -t.p1[1]], [t.p1[0], t.p2[0], t.p3[0], t.p1[0]], 'b-')
+    # plt.plot(-paths[:, 1], paths[:, 0])
+    # for t in triangulation:
+    #     plt.plot([-t.p1[1], -t.p2[1], -t.p3[1], -t.p1[1]], [t.p1[0], t.p2[0], t.p3[0], t.p1[0]], 'b-')
     # plt.plot([p[0] for p in points], [p[1] for p in points], 'ro')
     plt.plot(-points[:, 1], points[:,0], 'ro')
     plt.axis("equal")
