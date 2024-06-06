@@ -12,8 +12,11 @@ def fit_curve(points):
     if x.shape[0] == 0:
         return None
     if x.shape[0] == 2:
-        return [0] + np.polyfit(x.flatten(), y.flatten(), 1).tolist()
-    return np.polyfit(x.flatten(), y.flatten(), 2)
+        return [0, 0] + np.polyfit(x.flatten(), y.flatten(), 1).tolist()
+    elif x.shape[0] >= 3:
+        return [0] + np.polyfit(x.flatten(), y.flatten(), 2).tolist()
+    # else:
+    #     return np.polyfit(x.flatten(), y.flatten(), 3).tolist()
 
 
 
@@ -21,9 +24,11 @@ def fit_curve(points):
 fig = plt.figure(1)
 ax1 = fig.add_subplot(111, aspect='equal')
 
-with open("hist_cone_list2.json", "r") as f:
+with open("hist_cone_list4.json", "r") as f:
     hist_cone_list = json.load(f)
-cone_list_idx = 104
+
+cone_list_idx = 122
+print(len(hist_cone_list))
 def plot(event):
     global cone_list_idx
     if event.key == 'j':
@@ -43,12 +48,13 @@ def plot(event):
         angles = []
         for i in range(3):
             first_vector = t.points[(i+1)%3] - t.points[i]
-            second_vector = t.points[(i+2)%3] - t.points[(i+1)%3]
+            second_vector = t.points[(i+1)%3] - t.points[(i+2)%3]
             cos_theta = np.dot(first_vector, second_vector) / (np.linalg.norm(first_vector) * np.linalg.norm(second_vector))
             theta = np.arccos(cos_theta)
             angles.append(theta)
-        min_angle = min(angles)
-        if min_angle > np.pi / 5:
+        min_angle = max(angles)
+        if min_angle < 120.0 * np.pi / 180:
+            # print(min_angle, np.rad2deg(min_angle))
             filtered_triangulation.append(t)
     paths = bfs(filtered_triangulation)
     print(paths)
@@ -58,14 +64,16 @@ def plot(event):
     C = fit_curve(paths)
     # Sample 100 points from the curve
     x = points[:, 0].reshape(-1, 1)
-    c_x = np.linspace(min(x), max(x), 100)
-    c_y = C[0] * c_x**2 + C[1] * c_x + C[2]
+    c_x = np.linspace(-0.5, max(x), 100)
+    c_y = C[0] * c_x**3 + C[1] * c_x**2 + C[2] * c_x + C[3]
     curve_points = np.hstack((c_x.reshape(-1, 1), c_y.reshape(-1, 1)))
     # plot the curve_points
     ax1.plot(-curve_points[:, 1], curve_points[:, 0], 'ro')
 
     ax1.plot(-paths[:, 1], paths[:, 0], 'bo')
     ax1.plot(-paths[:, 1], paths[:, 0], 'b-')
+    for t in triangulation:
+        ax1.plot([-t.p1[1], -t.p2[1], -t.p3[1], -t.p1[1]], [t.p1[0], t.p2[0], t.p3[0], t.p1[0]], 'g-')
     for t in filtered_triangulation:
         ax1.plot([-t.p1[1], -t.p2[1], -t.p3[1], -t.p1[1]], [t.p1[0], t.p2[0], t.p3[0], t.p1[0]], 'b-')
     ax1.plot(-points[:, 1], points[:,0], 'ro')
