@@ -9,7 +9,7 @@ def create_video(folder_path, video_name, fps=30):
         print(f"[!] Folder not found: {folder_path}")
         return
     for filename in sorted(os.listdir(folder_path)):
-        if filename.endswith(".png"):
+        if filename.endswith(".png") or filename.endswith(".jpeg"):
             image_path = os.path.join(folder_path, filename)
             image = cv2.imread(image_path)
             images.append(image)
@@ -30,6 +30,6 @@ def create_video(folder_path, video_name, fps=30):
     video.release()
 
 # Example usage
-folder_path = r"./__tmp_pic"
+folder_path = r"./Curve Fitting/__tmp_pic"
 video_name = "animation.mp4"
-create_video(folder_path, video_name)
+create_video(folder_path, video_name, fps=5)

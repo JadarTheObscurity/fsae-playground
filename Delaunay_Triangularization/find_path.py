@@ -83,8 +83,9 @@ def bfs(triangulation):
                 edges.append(e)
     # find the mid point that is closest to (0, 0)
     mid_point = np.array([(e.p1 + e.p2) / 2 for e in edges])
-    sort_idx = np.argsort(np.sum(np.square(mid_point), axis=1))
-    init_edge = edges[sort_idx[0]]
+    # sort_idx = np.argsort(np.sum(np.square(mid_point), axis=1))
+    # init_edge = edges[sort_idx[0]]
+    init_edge = edges[np.argmin(mid_point[:,0])]
     init_triangle = None
     for tri in triangulation:
         if init_edge in tri.edges:
@@ -109,8 +110,8 @@ def bfs(triangulation):
         return [start_edge] + path
     
     init_other_edges = [e for e in init_triangle.edges if e != init_edge]
-    path_edge_1 = greedy_search(init_triangle, init_other_edges[0], 10)
-    path_edge_2 = greedy_search(init_triangle, init_other_edges[1], 10)
+    path_edge_1 = greedy_search(init_triangle, init_other_edges[0], 50)
+    path_edge_2 = greedy_search(init_triangle, init_other_edges[1], 50)
     path_edge = [init_edge] + (path_edge_1 if len(path_edge_1) > len(path_edge_2) else path_edge_2)
     path = [(e.p1 + e.p2) / 2 for e in path_edge]
 

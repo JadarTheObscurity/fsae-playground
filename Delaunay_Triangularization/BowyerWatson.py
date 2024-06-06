@@ -51,6 +51,25 @@ def BowyerWatson(points):
         triangulation.remove(t)
     return triangulation
 
+def filtered_BowyerWatson(points):
+    triangulation = BowyerWatson(points)
+    filtered_triangulation = []
+    for t in triangulation:
+        # find the smallest angle in the triangle
+        angles = []
+        for i in range(3):
+            first_vector = t.points[(i+1)%3] - t.points[i]
+            second_vector = t.points[(i+1)%3] - t.points[(i+2)%3]
+            cos_theta = np.dot(first_vector, second_vector) / (np.linalg.norm(first_vector) * np.linalg.norm(second_vector))
+            theta = np.arccos(cos_theta)
+            angles.append(theta)
+        min_angle = max(angles)
+        if min_angle < 120.0 * np.pi / 180:
+            # print(min_angle, np.rad2deg(min_angle))
+            filtered_triangulation.append(t)
+    return filtered_triangulation
+
+
 
 class Triangle:
     def __init__(self, p1, p2, p3):
