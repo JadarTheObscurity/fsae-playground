@@ -111,11 +111,11 @@ def bfs(triangulation):
     init_other_edges = [e for e in init_triangle.edges if e != init_edge]
     path_edge_1 = greedy_search(init_triangle, init_other_edges[0], 10)
     path_edge_2 = greedy_search(init_triangle, init_other_edges[1], 10)
-    path_edge = [init_edge] + path_edge_1 if len(path_edge_1) > len(path_edge_2) else path_edge_2
+    path_edge = [init_edge] + (path_edge_1 if len(path_edge_1) > len(path_edge_2) else path_edge_2)
     path = [(e.p1 + e.p2) / 2 for e in path_edge]
 
     # modify the last point to determine the best path
-    if len(path_edge) > 3:
+    if len(path_edge) >= 2:
         last_edge = path_edge[-1]
         last_triangle = [t for t in triangulation if last_edge in t.edges][0]
         other_edges = [e for e in last_triangle.edges if e != last_edge and e != path_edge[-2]]
