@@ -24,6 +24,8 @@ def match_points(points, prev_points, threshold=2):
     now_prev_match = []
     now_prev_dist = []
     prev_now_match = []
+    if len(points) == 0 or len(prev_points) == 0:
+        return []
     for p in points:
         now_prev_match.append(np.argmin(np.sum(np.square(p[None, :] - prev_points), axis=1)))
         now_prev_dist.append(np.min(np.sum(np.square(p[None, :] - prev_points), axis=1)))
@@ -49,13 +51,23 @@ def draw_match_points(curr_points, prev_points, ax):
 
 def icp(curr_points, prev_points):
     matched_pair = match_points(curr_points, prev_points)
+    if len(matched_pair) == 0: 
+        return prev_points
     matched_curr_points = curr_points[[pair[0] for pair in matched_pair]]
     matched_prev_points = prev_points[[pair[1] for pair in matched_pair]]
     curr_points_center = np.mean(matched_curr_points, axis=0)
     prev_points_center = np.mean(matched_prev_points, axis=0)
 
     # Shift
-    ts = curr_points_center - prev_points_center
+    offsets = []
+    for pair in matched_pair:
+        p1 = curr_points[pair[0]]
+        p2 = prev_points[pair[1]]
+        offsets.append(p1 - p2)
+    weights = 1 / (np.sum(np.square(offsets), axis=1) + 0.1)
+    ts = np.average(offsets, weights=weights, axis=0)
+    print(ts, weights)
+    # ts = curr_points_center - prev_points_center
     prev_points = prev_points + ts
 
     # Rotate
@@ -68,23 +80,21 @@ def icp(curr_points, prev_points):
         if angle < -np.pi: angle += 2 * np.pi
         angles.append(angle)
     # TODO: Regect outliers
-    angle = np.mean(angles)
+    if len(angles) > 1:
+        angle_means = []
+        angle_stds = []
+        for i in range(len(angles)):
+            angle_mean = np.mean(angles[0:i] + angles[i+1:])
+            angle_std = np.std(angles[0:i] + angles[i+1:])
+            angle_means.append(angle_mean)
+            angle_stds.append(angle_std)
+        angle = angle_means[np.argmin(angle_stds)]
+    else:
+        angle = angles[0]
+    print(angle, angles)
     R = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
     return  (R @ (prev_points - prev_points_center).T).T + prev_points_center
 
-fig, [ax1, ax2, ax3] = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
-axs = [ax1, ax2, ax3]
-
-with open("2024_06_06_20_59_log.json", "r") as f:
-    log_file = json.load(f)
-
-hist_timestamp = [log["timestamp"] for log in log_file]
-hist_speed = [log["speed"] for log in log_file]
-hist_steering = [log["steering_angle"] for log in log_file]
-hist_cone_list = [log["cones"] for log in log_file]
-cone_list_idx = 10
-print(len(hist_cone_list))
-accum_points = np.array(hist_cone_list[cone_list_idx])
 def plot(event):
     global cone_list_idx
     global accum_points
@@ -109,7 +119,7 @@ def plot(event):
 
     accum_points -= prior_motion
     draw_match_points(curr_points, accum_points, axs[0])
-    for i in range(2):
+    for i in range(4):
         accum_points = icp(curr_points, accum_points)
     # Add new points to the accumulated points if the distance is large
     for p in curr_points:
@@ -126,7 +136,8 @@ def plot(event):
     # draw_match_points(curr_points, partial_accum_points, axs[3])
     axs[1].cla()
     axs[1].plot([0], [ 0], 'o', color='#000000')
-    axs[1].plot(-accum_points[:, 1], accum_points[:,0], 'ro')
+    axs[1].plot(-accum_points[:, 1], accum_points[:,0], 'o', color='#800000')
+    axs[1].plot(-curr_points[:, 1], curr_points[:,0], 'ro')
     axs[1].axis("equal")
     axs[1].set_xlim(-10, 10)
     axs[1].set_ylim(-10, 10)
@@ -155,6 +166,20 @@ def plot(event):
     fig.canvas.draw()
     # plt.savefig(f'__tmp_pic/frame_{cone_list_idx:03d}.jpeg')
 
-cid = fig.canvas.mpl_connect('key_press_event', plot)
 
-plt.show()
+if __name__ == '__main__':
+    fig, [ax1, ax2, ax3] = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
+    axs = [ax1, ax2, ax3]
+
+    with open("2024_06_07_08_12_log.json", "r") as f:
+        log_file = json.load(f)
+
+    hist_timestamp = [log["timestamp"] for log in log_file]
+    hist_speed = [log["speed"] for log in log_file]
+    hist_steering = [log["steering_angle"] for log in log_file]
+    hist_cone_list = [log["cones"] for log in log_file]
+    cone_list_idx = 10
+    print(len(hist_cone_list))
+    accum_points = np.array(hist_cone_list[cone_list_idx])
+    cid = fig.canvas.mpl_connect('key_press_event', plot)
+    plt.show()
